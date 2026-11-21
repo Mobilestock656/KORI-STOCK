@@ -50,9 +50,10 @@ label{font-size:13px;color:var(--mut);display:block;margin:8px 0 4px}
       <div><label>บาร์โค้ด / รหัสสินค้า (ยิงช่องนี้ได้)</label><input id="p_sku" autocomplete="off"></div><div><label>ชื่อสินค้า</label><input id="p_name"></div>
       <div><label>หน่วย</label><input id="p_unit" placeholder="ชิ้น"></div><div id="qtyBox"><label>จำนวนตั้งต้น</label><input id="p_qty" type="number" min="0"></div>
       <div><label>จุดสั่งซื้อ</label><input id="p_reorder" type="number" min="0"></div><div><label>ต้นทุน/หน่วย</label><input id="p_cost" type="number" min="0"></div>
-      <div><label>ราคาขาย</label><input id="p_price" type="number" min="0"></div>
+      <div><label>ราคาขาย</label><input id="p_price" type="number" min="0"></div><div><label>&nbsp;</label><label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="p_off" style="width:auto">ยกเลิกใช้ (ไม่แสดงใน "สินค้าที่ต้องสั่ง")</label></div>
     </div><p><button class="btn" onclick="saveP()">บันทึกสินค้า</button> <button class="btn g" onclick="clearP()">ล้างฟอร์ม</button></p></div>
-  <div class="card"><h3>สินค้าทั้งหมด</h3><input id="q" placeholder="ค้นหาชื่อหรือรหัส" oninput="renderProd()"><div class="wrap" id="plist" style="margin-top:8px"></div></div>
+  <div class="card"><h3>สินค้าทั้งหมด</h3><input id="q" placeholder="ค้นหาชื่อหรือรหัส" oninput="renderProd()"><p><button class="btn g" onclick="pr('รายการสินค้า',prodRows(0))">พิมพ์</button> <button class="btn g" onclick="dl('สินค้า',prodRows(1))">โหลด Excel</button></p><div class="wrap" id="plist" style="margin-top:8px"></div></div>
+  <div class="card"><h3>ประวัติปรับราคา (ต้นทุน / ราคาขาย)</h3><div class="wrap" id="plog"></div></div>
 </section>
 
 <section id="doc" class="sec">
@@ -68,7 +69,8 @@ label{font-size:13px;color:var(--mut);display:block;margin:8px 0 4px}
 </section>
 
 <section id="ck" class="sec">
-  <div class="card"><h3>เช็คสต็อก / ปรับยอด</h3>
+  <div class="card" id="cnt"></div>
+  <div class="card"><h3>ปรับยอดรายตัว (ทีละรายการ)</h3>
     <div style="display:flex;gap:8px"><input id="ck_q" placeholder="ยิงบาร์โค้ด หรือพิมพ์ชื่อสินค้า" oninput="renderCk()"><button class="btn g" onclick="openCam(c=>{closeCam();$('ck_q').value=c;renderCk()})">📷</button></div>
     <div class="row"><div><label>สาเหตุที่ปรับ</label><select id="ck_r"><option>นับผิด/ลงบันทึกผิด</option><option>ของเสีย/หมดอายุ</option><option>ของหาย</option><option>ใช้แล้วไม่ได้บันทึก</option><option>อื่นๆ</option></select></div><div><label>หมายเหตุเพิ่มเติม</label><input id="ck_n"></div></div>
     <div class="wrap" id="ck_list" style="margin-top:8px"></div></div>
@@ -77,22 +79,25 @@ label{font-size:13px;color:var(--mut);display:block;margin:8px 0 4px}
 <section id="mv" class="sec">
   <div class="card"><h3>ความเคลื่อนไหวสินค้า</h3>
     <div class="row"><div><label>ตั้งแต่</label><input type="date" id="mv_f"></div><div><label>ถึง</label><input type="date" id="mv_t"></div><div><label>แบรนด์</label><select id="mv_b" onchange="renderMv()"><option value="">ทั้งหมด</option></select></div></div>
-    <p><button class="btn" onclick="loadMv()">แสดงผล</button></p><div class="wrap" id="mv_sum"></div></div>
+    <p><button class="btn" onclick="loadMv()">แสดงผล</button> <button class="btn g" onclick="pr('ความเคลื่อนไหวสินค้า '+$('mv_f').value+' ถึง '+$('mv_t').value,mvRows())">พิมพ์</button> <button class="btn g" onclick="dl('ความเคลื่อนไหว',mvRows())">โหลด Excel</button></p><div class="wrap" id="mv_sum"></div></div>
   <div class="card"><h3>รายการเคลื่อนไหว (ใครทำ / สาเหตุ)</h3><div class="wrap" id="mv_rows"></div></div>
 </section>
 
 <section id="tx" class="sec">
-  <div class="card"><h3>บันทึกรับเข้า / จ่ายออก</h3>
-    <label>สินค้า</label><select id="t_sku"></select>
-    <div class="row"><div><label>ประเภท</label><select id="t_type"><option value="IN">รับเข้า</option><option value="OUT">จ่ายออก</option></select></div>
+  <div class="card"><h3>บันทึกรับเข้า / เบิก / โอน</h3>
+    <label>ยิงบาร์โค้ด หรือพิมพ์ชื่อ/รหัส แล้วกด Enter</label>
+    <div style="display:flex;gap:8px"><input id="t_scan" autocomplete="off" placeholder="ยิงบาร์โค้ดที่นี่"><button class="btn g" onclick="openCam(c=>{closeCam();tScan(c)})">📷 สแกน</button></div>
+    <div id="t_pick"></div>
+    <div class="row"><div><label>ประเภท</label><select id="t_type" onchange="tType()"><option value="IN">รับเข้า</option><option value="OUT">เบิก (ใช้ในร้าน / ขาย)</option><option value="TRF">โอนไปสาขาอื่น</option></select></div>
     <div><label>จำนวน</label><input id="t_qty" type="number" min="1"></div></div>
+    <div id="t_destBox" style="display:none"><label>โอนไปที่ (สาขา / ปลายทาง)</label><input id="t_dest"></div>
     <label>หมายเหตุ</label><input id="t_note"><p><button class="btn" onclick="saveTx()">บันทึกรายการ</button></p></div>
 </section>
 
 <section id="rep" class="sec">
   <div class="card"><h3>ประเมินการสั่งซื้อจากต้นทุนที่ใช้ไป</h3>
     <label>ย้อนหลัง (วัน)</label><select id="days" onchange="loadRep()"><option>7</option><option selected>30</option><option>90</option></select>
-    <p style="color:var(--mut);font-size:13px">แนะนำสั่ง = ใช้เฉลี่ย 14 วัน + จุดสั่งซื้อ − คงเหลือ</p><p><button class="btn" onclick="poFromRep()">สร้างใบสั่งซื้อจากรายการแนะนำ</button></p>
+    <p style="color:var(--mut);font-size:13px">แนะนำสั่ง = ใช้เฉลี่ย 14 วัน + จุดสั่งซื้อ − คงเหลือ</p><p><button class="btn" onclick="poFromRep()">สร้างใบสั่งซื้อจากรายการแนะนำ</button> <button class="btn g" onclick="pr('สินค้าที่ต้องสั่ง',repRows())">พิมพ์</button> <button class="btn g" onclick="dl('สินค้าที่ต้องสั่ง',repRows())">โหลด Excel</button></p>
     <div class="wrap" id="replist"></div></div>
   <div class="card"><h3>ซัพพลายเออร์</h3>
     <div class="row"><div><label>ชื่อ</label><input id="sp_name"></div><div><label>เบอร์โทร</label><input id="sp_phone"></div><div><label>เลขผู้เสียภาษี</label><input id="sp_taxid"></div><div><label>เครดิต / เงื่อนไข</label><input id="sp_terms" placeholder="เช่น เครดิต 30 วัน"></div></div>
@@ -124,12 +129,12 @@ let D={products:[],tx:[],line:{}};
 const $=i=>document.getElementById(i), nf=n=>(+n).toLocaleString('th-TH',{maximumFractionDigits:2}), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const API='https://script.google.com/macros/s/AKfycby6Gsq0-2SvnNfxcIl9E8yjKTK4j_Uu1q4vkPEsfdCtyt5f2VeUG_nv_nO-vQ3FJPVcgw/exec';
 let TOKEN='',ME=null;try{TOKEN=localStorage.getItem('ks_t')||'';ME=JSON.parse(localStorage.getItem('ks_me')||'null')}catch(e){}
-async function run(fn,...a){let j;try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:TOKEN,fn,args:a})});j=await r.json()}catch(e){toast('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจอินเทอร์เน็ตหรือลิงก์ API');throw e}
+async function run(fn,...a){let j;try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:TOKEN,fn,args:a})});j=await r.json()}catch(e){toast(API.indexOf('วาง_URL')===0?'ยังไม่ได้ใส่ URL ของ API ในบรรทัด const API':'เชื่อมต่อไม่ได้ ('+(e&&e.message||e)+') ตรวจลิงก์ /exec และสิทธิ์ ทุกคน');throw e}
   if(!j.ok){if(j.error==='SESSION_EXPIRED'){logout();toast('หมดเวลา กรุณาเข้าสู่ระบบใหม่')}else toast(j.error);throw new Error(j.error)}return j.data}
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2800)}
 $('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
-  document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on',s.id===b.dataset.t));if(b.dataset.t==='rep')loadRep();if(b.dataset.t==='mv')loadMv();if(b.dataset.t==='ck')renderCk()};
-const low=()=>D.products.filter(p=>+p.reorder>0&&+p.qty<=+p.reorder);
+  document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on',s.id===b.dataset.t));if(b.dataset.t==='rep')loadRep();if(b.dataset.t==='mv')loadMv();if(b.dataset.t==='ck'){renderCk();loadCnt()};if(b.dataset.t==='prod')loadPlog();if(b.dataset.t==='tx')setTimeout(()=>$('t_scan').focus(),50);if(b.dataset.t==='doc')setTimeout(()=>$('scan').focus(),50)};
+const low=()=>D.products.filter(p=>!p.inactive&&+p.reorder>0&&+p.qty<=+p.reorder);
 async function load(){D=await run('getData');render()}
 function render(){
   const l=low(),val=D.products.reduce((s,p)=>s+p.qty*p.cost,0);
@@ -139,7 +144,7 @@ function render(){
   const nm=Object.fromEntries(D.products.map(p=>[p.sku,p.name]));
   $('recent').innerHTML=D.tx.length?`<table>${D.tx.slice(0,8).map(t=>`<tr><td>${new Date(t.date).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}</td><td>${esc(nm[t.sku]||t.sku)}</td><td class="r">${t.type==='ADJ'?(t.qty>0?'+':''):t.type==='IN'?'+':'−'}${nf(t.qty)}</td></tr>`).join('')}</table>`:'<div class="empty">ยังไม่มีรายการ เริ่มที่แท็บ "รับ-จ่าย"</div>';
   chart();renderProd();renderDocList();renderSp();renderCk();$('vlist').innerHTML=(D.suppliers||[]).map(x=>x.name).map(v=>`<option value="${esc(v)}">`).join('');
-  $('t_sku').innerHTML=D.products.map(p=>`<option value="${esc(p.sku)}">${esc(p.name)} (${nf(p.qty)} ${esc(p.unit)})</option>`).join('');
+  if(TSKU)tShow();
   $('lstat').textContent=(D.line.token?'✅ มี Token แล้ว':'❌ ยังไม่มี Token')+' | '+(D.line.group?'✅ มี Group ID แล้ว':'❌ ยังไม่มี Group ID');
   if(!$('s_gid').value)$('s_gid').value=D.line.group||'';
 }
@@ -155,15 +160,22 @@ function chart(){
 }
 function renderProd(){
   const q=$('q').value.toLowerCase(),a=D.products.filter(p=>(p.name+p.sku).toLowerCase().includes(q));
-  $('plist').innerHTML=a.length?`<table><tr><th>สินค้า</th><th class="r">คงเหลือ</th><th class="r">ต้นทุน</th><th></th></tr>${a.slice(0,100).map(p=>`<tr><td>${esc(p.name)}<br><small style="color:var(--mut)">${esc(p.sku)}</small></td><td class="r">${nf(p.qty)} ${esc(p.unit)} ${+p.reorder>0&&+p.qty<=+p.reorder?'<span class="tag">ต่ำ</span>':''}</td><td class="r">${nf(p.cost)}</td><td class="r"><button class="btn g" onclick="editP('${esc(p.sku)}')">แก้ไข</button></td></tr>`).join('')}</table>`:'<div class="empty">ยังไม่มีสินค้า เพิ่มสินค้าแรกด้านบน</div>';
+  $('plist').innerHTML=a.length?`<table><tr><th>สินค้า</th><th class="r">คงเหลือ</th><th class="r">ต้นทุน</th><th></th></tr>${a.slice(0,100).map(p=>`<tr><td>${esc(p.name)}<br><small style="color:var(--mut)">${esc(p.sku)}</small></td><td class="r">${nf(p.qty)} ${esc(p.unit)} ${p.inactive?'<span class="tag" style="background:var(--mut)">เลิกใช้</span>':+p.reorder>0&&+p.qty<=+p.reorder?'<span class="tag">ต่ำ</span>':''}</td><td class="r">${nf(p.cost)}</td><td class="r"><button class="btn g" onclick="editP('${esc(p.sku)}')">แก้ไข</button></td></tr>`).join('')}</table>`:'<div class="empty">ยังไม่มีสินค้า เพิ่มสินค้าแรกด้านบน</div>';
 }
 const F=['sku','name','unit','qty','reorder','cost','price'];
-function editP(s){const p=D.products.find(x=>String(x.sku)===s);F.forEach(k=>$('p_'+k).value=p[k]);$('p_sku').readOnly=true;$('qtyBox').style.display='none';$('ptitle').textContent='แก้ไขสินค้า (ปรับจำนวนที่แท็บ รับ-จ่าย)';scrollTo(0,0)}
-function clearP(){F.forEach(k=>$('p_'+k).value='');$('p_sku').readOnly=false;$('qtyBox').style.display='';$('ptitle').textContent='เพิ่มสินค้า'}
-async function saveP(){const p={};F.forEach(k=>p[k]=$('p_'+k).value);if(!p.sku||!p.name)return toast('กรอกรหัสและชื่อสินค้า');
-  await run('saveProduct',p);toast('บันทึกสินค้าแล้ว');clearP();load()}
-async function saveTx(){const t={sku:$('t_sku').value,type:$('t_type').value,qty:$('t_qty').value,note:$('t_note').value};
-  const r=await run('addTx',t);toast('บันทึกแล้ว คงเหลือ '+nf(r.after));$('t_qty').value='';$('t_note').value='';load()}
+function editP(s){const p=D.products.find(x=>String(x.sku)===s);F.forEach(k=>$('p_'+k).value=p[k]);$('p_off').checked=!!p.inactive;$('p_sku').readOnly=true;$('qtyBox').style.display='none';$('ptitle').textContent='แก้ไขสินค้า (ปรับจำนวนที่แท็บ รับ-จ่าย)';scrollTo(0,0)}
+function clearP(){F.forEach(k=>$('p_'+k).value='');$('p_off').checked=false;$('p_sku').readOnly=false;$('qtyBox').style.display='';$('ptitle').textContent='เพิ่มสินค้า'}
+async function saveP(){const p={};F.forEach(k=>p[k]=$('p_'+k).value);p.inactive=$('p_off').checked;if(!p.sku||!p.name)return toast('กรอกรหัสและชื่อสินค้า');
+  await run('saveProduct',p);toast('บันทึกสินค้าแล้ว');clearP();load();loadPlog()}
+let TSKU='';
+function tPick(p){TSKU=p.sku;tShow()}
+function tShow(){const p=D.products.find(x=>x.sku===TSKU);$('t_pick').innerHTML=p?`<div class="card" style="margin:10px 0;background:var(--bg)"><b>${esc(p.name)}</b><br><small style="color:var(--mut)">${esc(p.sku)} · ${esc(p.brand)}</small><div>คงเหลือ <b>${nf(p.qty)}</b> ชิ้น · ต้นทุน ${nf(p.cost)}</div></div>`:''}
+function tScan(c){c=String(c).trim();if(!c)return;const q=c.toLowerCase();let m=D.products.filter(x=>String(x.sku)===c);if(!m.length)m=D.products.filter(x=>(x.name+' '+x.sku).toLowerCase().includes(q));
+  if(m.length===1){tPick(m[0]);$('t_qty').focus()}else if(m.length>1){$('t_pick').innerHTML='<div class="card" style="margin:10px 0">เจอ '+m.length+' รายการ เลือก:'+m.slice(0,8).map(x=>`<p><button class="btn g" onclick="tPick(D.products.find(a=>a.sku==='${esc(x.sku)}'))">${esc(x.name)}</button></p>`).join('')+'</div>'}else toast('ไม่พบสินค้า: '+c)}
+$('t_scan').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tScan(e.target.value);e.target.value=''}});
+function tType(){$('t_destBox').style.display=$('t_type').value==='TRF'?'block':'none'}
+async function saveTx(){if(!TSKU)return toast('สแกนหรือเลือกสินค้าก่อน');const ty=$('t_type').value,dest=$('t_dest').value.trim(),nt=$('t_note').value.trim();if(ty==='TRF'&&!dest)return toast('ระบุปลายทางที่โอนไป');
+  const r=await run('addTx',{sku:TSKU,type:ty,qty:$('t_qty').value,note:(ty==='TRF'?'โอนไป '+dest+(nt?' · ':''):'')+nt});toast('บันทึกแล้ว คงเหลือ '+nf(r.after));$('t_qty').value='';$('t_note').value='';await load();tShow()}
 let RP=[];async function loadRep(){const r=await run('getReport',$('days').value);RP=r;
   $('replist').innerHTML=`<table><tr><th>สินค้า</th><th class="r">ใช้ไป</th><th class="r">ต้นทุนที่ใช้</th><th class="r">แนะนำสั่ง</th><th class="r">งบ (บาท)</th></tr>${r.map(p=>`<tr><td>${esc(p.name)}</td><td class="r">${nf(p.usedQty)}</td><td class="r">${nf(p.usedCost)}</td><td class="r"><b>${nf(p.suggest)}</b> ${esc(p.unit)}</td><td class="r">${nf(p.estCost)}</td></tr>`).join('')}
   <tr><th colspan="4" class="r">งบสั่งซื้อรวม</th><th class="r">${nf(r.reduce((s,p)=>s+p.estCost,0))}</th></tr></table>`}
@@ -227,7 +239,7 @@ async function openCam(fn){CAMT=fn;$('camBox').style.display='flex';const v=$('c
 function closeCam(){clearInterval(camTimer);if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}if(zxr){try{zxr.reset()}catch(e){}zxr=null}$('camV').srcObject=null;$('camBox').style.display='none'}
 let POC='',POB='';
 function renderPO(){const box=$('poBox');if(DT!=='PO'){box.style.display='none';return}box.style.display='block';
-  const cs=[...new Set(D.products.map(p=>p.company).filter(Boolean))].sort(),bs=[...new Set(D.products.filter(p=>!POC||p.company===POC).map(p=>p.brand).filter(Boolean))].sort(),ps=D.products.filter(p=>(!POC||p.company===POC)&&(!POB||p.brand===POB));
+  const cs=[...new Set(D.products.map(p=>p.company).filter(Boolean))].sort(),bs=[...new Set(D.products.filter(p=>!POC||p.company===POC).map(p=>p.brand).filter(Boolean))].sort(),ps=D.products.filter(p=>!p.inactive&&(!POC||p.company===POC)&&(!POB||p.brand===POB));
   box.innerHTML=`<div class="row"><div><label>บริษัท</label><select onchange="POC=this.value;POB='';if(POC)$('d_party').value=POC;renderPO()"><option value="">ทั้งหมด</option>${cs.map(c=>`<option ${c===POC?'selected':''}>${esc(c)}</option>`).join('')}</select></div><div><label>แบรนด์</label><select onchange="POB=this.value;renderPO()"><option value="">ทั้งหมด</option>${bs.map(b=>`<option ${b===POB?'selected':''}>${esc(b)}</option>`).join('')}</select></div></div><label>สินค้า (${ps.length} รายการ)</label><div style="display:flex;gap:8px"><select id="po_p">${ps.slice(0,300).map(p=>`<option value="${esc(p.sku)}">${esc(p.name)} (เหลือ ${nf(p.qty)})</option>`).join('')}</select><button class="btn" onclick="addPO()">เพิ่ม</button></div>`}
 function addPO(){const p=D.products.find(x=>x.sku===$('po_p').value);if(p)addLine(p)}
 function renderCk(){const q=$('ck_q').value.trim().toLowerCase(),a=D.products.filter(p=>!q||(p.name+' '+p.sku).toLowerCase().includes(q)).slice(0,40);
@@ -238,9 +250,46 @@ let MV={rows:[],summary:[]};const ymd=d=>new Date(d.getTime()+7*36e5).toISOStrin
 async function loadMv(){if(!$('mv_t').value){$('mv_t').value=ymd(new Date());$('mv_f').value=ymd(new Date(Date.now()-29*864e5))}
   MV=await run('getMovements',$('mv_f').value,$('mv_t').value);const bs=[...new Set(MV.summary.map(s=>s.brand).filter(Boolean))].sort();
   $('mv_b').innerHTML='<option value="">ทั้งหมด</option>'+bs.map(b=>`<option>${esc(b)}</option>`).join('');renderMv()}
-function renderMv(){const b=$('mv_b').value,s=MV.summary.filter(x=>!b||x.brand===b).sort((x,y)=>y.out-x.out),r=MV.rows.filter(x=>!b||x.brand===b),TL={IN:'รับเข้า',OUT:'เบิก/ขาย',ADJ:'ปรับยอด'};
-  $('mv_sum').innerHTML=s.length?`<table><tr><th>สินค้า (ใช้มาก→น้อย)</th><th class="r">ตั้งต้น</th><th class="r">เข้า</th><th class="r">ออก</th><th class="r">ปรับ</th><th class="r">เหลือ</th><th class="r">ต้นทุนที่ใช้</th></tr>${s.map(x=>`<tr><td>${esc(x.name)}<br><small style="color:var(--mut)">${esc(x.brand)} ${esc(x.type)}</small></td><td class="r">${nf(x.open)}</td><td class="r">${nf(x.in)}</td><td class="r">${nf(x.out)}</td><td class="r">${nf(x.adj)}</td><td class="r">${nf(x.close)}</td><td class="r">${nf(x.out*x.cost)}</td></tr>`).join('')}</table>`:'<div class="empty">ไม่มีความเคลื่อนไหวในช่วงนี้</div>';
-  $('mv_rows').innerHTML=r.length?`<table>${r.slice(0,200).map(x=>`<tr><td>${new Date(x.date).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}</td><td>${esc(x.name)}<br><small style="color:var(--mut)">${TL[x.type]||x.type} · ${esc(x.note)} · ${esc(x.user)}</small></td><td class="r">${x.type==='OUT'?'−':x.qty>0?'+':''}${nf(x.qty)}</td></tr>`).join('')}</table>`:'<div class="empty">ไม่มีรายการ</div>'}
+const TL={IN:'รับเข้า',OUT:'เบิก/ขาย',TRF:'โอนออก',ADJ:'ปรับยอด'};
+function mvF(){const b=$('mv_b').value;return{s:MV.summary.filter(x=>!b||x.brand===b).sort((x,y)=>y.out-x.out),r:MV.rows.filter(x=>!b||x.brand===b)}}
+function renderMv(){const {s,r}=mvF();
+  $('mv_sum').innerHTML=s.length?`<table><tr><th>สินค้า (ใช้มาก→น้อย)</th><th class="r">ตั้งต้น</th><th class="r">เข้า</th><th class="r">ออก</th><th class="r">โอน</th><th class="r">ปรับ</th><th class="r">เหลือ</th><th class="r">ต้นทุนที่ใช้</th></tr>${s.map(x=>`<tr><td>${esc(x.name)}<br><small style="color:var(--mut)">${esc(x.brand)} ${esc(x.type)}</small></td><td class="r">${nf(x.open)}</td><td class="r">${nf(x.in)}</td><td class="r">${nf(x.out)}</td><td class="r">${nf(x.trf)}</td><td class="r">${nf(x.adj)}</td><td class="r">${nf(x.close)}</td><td class="r">${nf(x.out*x.cost)}</td></tr>`).join('')}</table>`:'<div class="empty">ไม่มีความเคลื่อนไหวในช่วงนี้</div>';
+  $('mv_rows').innerHTML=r.length?`<table>${r.slice(0,200).map(x=>`<tr><td>${new Date(x.date).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}</td><td>${esc(x.name)}<br><small style="color:var(--mut)">${TL[x.type]||x.type} · ${esc(x.note)} · ${esc(x.user)}</small></td><td class="r">${x.type==='OUT'||x.type==='TRF'?'−':x.qty>0?'+':''}${nf(x.qty)}</td></tr>`).join('')}</table>`:'<div class="empty">ไม่มีรายการ</div>'}
+function mvRows(){const {s,r}=mvF();return [['สินค้า','แบรนด์','ประเภท','ตั้งต้น','เข้า','ออก','โอน','ปรับ','คงเหลือ','ต้นทุนที่ใช้']].concat(s.map(x=>[x.name,x.brand,x.type,x.open,x.in,x.out,x.trf,x.adj,x.close,x.out*x.cost])).concat([[''],['วันที่','สินค้า','ประเภท','จำนวน','หมายเหตุ','ผู้ทำ']]).concat(r.map(x=>[new Date(x.date).toLocaleString('th-TH'),x.name,TL[x.type]||x.type,x.qty,x.note,x.user]))}
+function prodRows(ex){const q=$('q').value.toLowerCase();return [['บาร์โค้ด','ชื่อสินค้า','แบรนด์','บริษัท','ประเภท','คงเหลือ','จุดสั่งซื้อ','ต้นทุน','ราคาขาย','สถานะ']].concat(D.products.filter(p=>(p.name+p.sku).toLowerCase().includes(q)).map(p=>[ex?'="'+p.sku+'"':p.sku,p.name,p.brand,p.company,p.type,p.qty,p.reorder,p.cost,p.price,p.inactive?'เลิกใช้':'']))}
+function repRows(){return [['สินค้า','คงเหลือ','จุดสั่งซื้อ','ใช้ไป','ต้นทุนที่ใช้','แนะนำสั่ง','งบประมาณ']].concat(RP.map(p=>[p.name,p.qty,p.reorder,p.usedQty,p.usedCost,p.suggest,p.estCost]))}
+function dl(name,rows){const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\r\n'),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=name+'_'+ymd(new Date())+'.csv';document.body.appendChild(a);a.click();a.remove()}
+function pr(title,rows){$('pa').innerHTML='<h2>'+esc(title)+'</h2><p>พิมพ์โดย '+esc(ME?ME.name:'')+' · '+new Date().toLocaleString('th-TH')+'</p><table style="font-size:12px">'+rows.map((r,i)=>'<tr>'+r.map(c=>(i?'<td>':'<th>')+esc(c)+(i?'</td>':'</th>')).join('')+'</tr>').join('')+'</table>';setTimeout(()=>print(),150)}
+async function loadPlog(){const a=await run('getPriceLog');$('plog').innerHTML=a.length?`<table>${a.map(x=>`<tr><td>${new Date(x.date).toLocaleDateString('th-TH')}</td><td>${esc(x.name)}<br><small style="color:var(--mut)">${esc(x.field)} · ${esc(x.note)} · ${esc(x.user)}</small></td><td class="r">${nf(x.old)} → <b>${nf(x.new)}</b></td></tr>`).join('')}</table>`:'<div class="empty">ยังไม่มีการปรับราคา</div>'}
+/* ---------- นับสต็อกเป็นรอบ (หลายคนช่วยกันสแกน) ---------- */
+let CNT,CSUM=null,CLOC='',CQ=Promise.resolve(),CLOG=[],CVIEW='scan';
+async function loadCnt(){CNT=await run('getCount');if(CNT&&CVIEW==='sum')await loadCsum();renderCnt()}
+async function loadCsum(){CSUM=await run('getCountSummary',CNT.id)}
+function renderCnt(){const b=$('cnt');if(CNT===undefined){b.innerHTML='<h3>นับสต็อกเป็นรอบ</h3><div class="empty">กำลังโหลด...</div>';return}
+  if(!CNT){b.innerHTML=`<h3>นับสต็อกเป็นรอบ</h3><p style="color:var(--mut);font-size:13px;margin:0 0 8px">เดินนับทีละตู้ ยิงบาร์โค้ดหรือกรอกเอง หลายคนช่วยกันนับพร้อมกันได้ ระบบรวมยอดทุกคนให้ แล้วสรุปตรง/ไม่ตรงตอนท้าย</p>${ME&&ME.admin?'<label>ชื่อรอบนับ</label><input id="cn_name" placeholder="เช่น นับสต็อกสิ้นเดือน"><p><button class="btn" onclick="startCnt()">เริ่มรอบนับใหม่</button></p>':'<div class="empty">ยังไม่มีรอบนับ ให้ผู้จัดการเริ่มรอบนับก่อน</div>'}`;return}
+  b.innerHTML=`<h3>${esc(CNT.name)}</h3><small style="color:var(--mut)">เริ่มโดย ${esc(CNT.by)}</small><div class="row" style="margin-top:8px"><button class="btn${CVIEW==='scan'?'':' g'}" onclick="CVIEW='scan';renderCnt()">สแกน / กรอก</button><button class="btn${CVIEW==='sum'?'':' g'}" onclick="CVIEW='sum';loadCsum().then(renderCnt)">สรุปยอดรวมทุกคน</button></div><div id="cn_body" style="margin-top:10px"></div>`;
+  CVIEW==='scan'?renderCscan():renderCsum()}
+async function startCnt(){await run('startCount',$('cn_name').value);CVIEW='scan';CLOG=[];await loadCnt()}
+function renderCscan(){$('cn_body').innerHTML=`<label>ตู้ / ชั้น / โซน ที่กำลังนับ</label><input id="cn_loc" value="${esc(CLOC)}" placeholder="เช่น ตู้ A ชั้น 2" oninput="CLOC=this.value">
+  <label>ยิงบาร์โค้ด หรือพิมพ์ชื่อ/รหัส แล้วกด Enter (ช่องขวาคือจำนวน)</label><div style="display:flex;gap:8px"><input id="cn_q" autocomplete="off" placeholder="ยิงบาร์โค้ดที่นี่"><input id="cn_n" type="number" value="1" style="width:84px"><button class="btn g" onclick="openCam(c=>cntFind(c))">📷</button></div><div id="cn_m"></div><div id="cn_log" style="margin-top:8px"></div>`;
+  $('cn_q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();cntFind(e.target.value);e.target.value='';$('cn_m').innerHTML=''}});
+  $('cn_q').addEventListener('input',()=>{const l=$('cn_q').value.trim().toLowerCase();$('cn_m').innerHTML=l.length<2?'':D.products.filter(x=>(x.name+' '+x.sku).toLowerCase().includes(l)).slice(0,8).map(x=>`<button class="btn g" style="margin:3px 3px 0 0" data-s="${esc(x.sku)}" onclick="cntAdd(D.products.find(p=>p.sku===this.dataset.s));$('cn_q').value=''">${esc(x.name)}</button>`).join('')});renderClog()}
+function cntFind(q){q=String(q).trim();if(!q)return;let p=D.products.find(x=>String(x.sku)===q);if(!p){const l=q.toLowerCase(),m=D.products.filter(x=>(x.name+' '+x.sku).toLowerCase().includes(l));if(m.length===1)p=m[0];else return toast(m.length?'พบหลายรายการ เลือกจากปุ่มด้านล่าง':'ไม่พบสินค้า: '+q)}cntAdd(p)}
+function cntAdd(p){if(!p)return;const n=+($('cn_n')?$('cn_n').value:1)||1,loc=CLOC;if($('cn_n'))$('cn_n').value=1;if($('cn_m'))$('cn_m').innerHTML='';
+  CQ=CQ.then(async()=>{try{const r=await run('countScan',CNT.id,p.sku,n,loc);CLOG.unshift({n:p.name,q:n,t:r.total,sku:p.sku,loc});CLOG=CLOG.slice(0,15);toast(p.name+': '+(n>0?'+':'')+n+' (รวม '+r.total+')');renderClog()}catch(e){}})}
+function cntUndo(i){const x=CLOG[i];if(!x)return;CLOG.splice(i,1);CQ=CQ.then(async()=>{try{const r=await run('countScan',CNT.id,x.sku,-x.q,x.loc);toast('ย้อนกลับแล้ว (รวม '+r.total+')')}catch(e){}renderClog()})}
+function renderClog(){const el=$('cn_log');if(!el)return;el.innerHTML=CLOG.length?'<small style="color:var(--mut)">สแกนล่าสุดของคุณ</small><table>'+CLOG.map((x,i)=>`<tr><td>${esc(x.n)}<br><small style="color:var(--mut)">${esc(x.loc||'-')}</small></td><td class="r">${x.q>0?'+':''}${x.q} (รวม ${x.t})</td><td class="r"><button class="btn g" onclick="cntUndo(${i})">ย้อน</button></td></tr>`).join('')+'</table>':''}
+function renderCsum(){const body=$('cn_body');if(!CSUM){body.innerHTML='<div class="empty">กำลังโหลด...</div>';return}
+  const only=$('cn_only')?$('cn_only').checked:true,a=CSUM.items.filter(x=>!only||x.diff!==0).sort((x,y)=>Math.abs(y.diff)-Math.abs(x.diff)),miss=CSUM.items.filter(x=>x.diff!==0).length,kv=o=>Object.entries(o).map(([k,v])=>esc(k)+' '+v).join(' · ');
+  body.innerHTML=`<p>นับแล้ว <b>${CSUM.items.length}</b> รายการ · ไม่ตรง <b style="color:var(--bad)">${miss}</b> · ตรง <b style="color:var(--ok)">${CSUM.items.length-miss}</b> · ยังไม่ได้นับ ${CSUM.notCounted} รายการ (จะไม่ถูกปรับ)</p>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="cn_only" style="width:auto" ${only?'checked':''} onchange="renderCsum()">แสดงเฉพาะที่ไม่ตรง</label>
+  <div class="wrap"><table><tr><th></th><th>สินค้า</th><th class="r">นับได้</th><th class="r">ในระบบ</th><th class="r">ผลต่าง</th></tr>${a.map(x=>`<tr><td><input type="checkbox" class="cn_c" data-s="${esc(x.sku)}" data-a="${x.counted}" style="width:auto" ${x.diff!==0?'checked':''}></td><td>${esc(x.name)}<br><small style="color:var(--mut)">${kv(x.locs)} | ผู้นับ ${kv(x.users)}</small>${x.changed?`<br><small style="color:var(--warn)">⚠ ยอดในระบบเปลี่ยนระหว่างนับ (ตอนเริ่ม ${x.start}) เช่น ขายหน้า POS ตรวจก่อนปรับ</small>`:''}</td><td class="r">${x.counted}</td><td class="r">${x.system}</td><td class="r" style="color:${x.diff?'var(--bad)':'var(--ok)'}">${x.diff>0?'+':''}${x.diff}</td></tr>`).join('')}</table></div>
+  <p><button class="btn g" onclick="exportCsum()">ดาวน์โหลด Excel</button></p>
+  ${ME&&ME.admin?`<label>สาเหตุที่ปรับ</label><select id="cn_r"><option>นับสต็อกประจำรอบ</option><option>ของเสีย/หมดอายุ</option><option>ของหาย</option><option>ใช้แล้วไม่ได้บันทึก</option><option>อื่นๆ</option></select><label>หมายเหตุ</label><input id="cn_nt"><p><button class="btn" onclick="applyCnt()">ปรับสต็อกตามที่ติ๊ก แล้วปิดรอบ</button> <button class="btn d" onclick="closeCnt(this)">ปิดรอบโดยไม่ปรับ</button></p>`:'<div class="empty">ผู้จัดการเป็นผู้ปรับสต็อกและปิดรอบ</div>'}`}
+function exportCsum(){dl('count_'+CNT.id,[['บาร์โค้ด','สินค้า','แบรนด์','นับได้','ในระบบ','ผลต่าง','ตู้','ผู้นับ'],...CSUM.items.map(x=>[x.sku,x.name,x.brand,x.counted,x.system,x.diff,JSON.stringify(x.locs),JSON.stringify(x.users)])])}
+async function applyCnt(){const it=[...document.querySelectorAll('.cn_c:checked')].map(e=>({sku:e.dataset.s,actual:+e.dataset.a}));if(!it.length)return toast('ติ๊กรายการที่ต้องการปรับก่อน');
+  const r=await run('applyCount',CNT.id,it,$('cn_r').value+($('cn_nt').value?': '+$('cn_nt').value:''));toast('ปรับสต็อก '+r.adjusted+' รายการ ปิดรอบแล้ว');CSUM=null;CNT=null;CVIEW='scan';await load();renderCnt()}
+function closeCnt(b){if(b.dataset.c){run('closeCount',CNT.id).then(()=>{toast('ปิดรอบแล้ว');CSUM=null;CNT=null;renderCnt()})}else{b.dataset.c=1;b.textContent='ยืนยันปิดรอบ';setTimeout(()=>{delete b.dataset.c;b.textContent='ปิดรอบโดยไม่ปรับ'},3000)}}
 renderDoc();
 if(TOKEN){showMe();load()}else showLogin();
 </script>
